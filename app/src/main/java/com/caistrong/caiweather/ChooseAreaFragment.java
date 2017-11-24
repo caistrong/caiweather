@@ -1,9 +1,11 @@
 package com.caistrong.caiweather;
 
 import android.app.ProgressDialog;
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -35,6 +37,7 @@ import okhttp3.Response;
  */
 
 public class ChooseAreaFragment extends Fragment {
+
     public static final int LEVEL_PROVINCE = 0;
     public static final int LEVEL_CITY =1;
     public static final int LEVEL_COUNTY =2;
@@ -61,16 +64,23 @@ public class ChooseAreaFragment extends Fragment {
     private City selectedCity;
     private int currentLevel;
 
+
     @Nullable
     @Override
-    public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+    public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
+
         View view = inflater.inflate(R.layout.choose_area,container,false);
+
         titleText = (TextView) view.findViewById(R.id.title_text);
         backButton = (Button) view.findViewById(R.id.back_button);
         listView = (ListView) view.findViewById(R.id.list_view);
-        adapter = new ArrayAdapter<>(getContext(),android.R.layout.simple_list_item_1,dataList);
+
+        adapter = new ArrayAdapter<>(getContext(),android.R.layout.simple_list_item_1,
+                dataList);
         listView.setAdapter(adapter);
         return view;
+
     }
 
     @Override
@@ -78,13 +88,20 @@ public class ChooseAreaFragment extends Fragment {
         super.onActivityCreated(savedInstanceState);
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener(){
             @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+            public void onItemClick(AdapterView<?> parent, View view, int position,
+                long id) {
                 if (currentLevel == LEVEL_PROVINCE){
                     selectedProvince = provinceList.get(position);
                     queryCities();
-                }else if (currentLevel == LEVEL_CITY){
+                }else if (currentLevel == LEVEL_CITY) {
                     selectedCity = cityList.get(position);
                     queryCounties();
+                }else if(currentLevel == LEVEL_COUNTY){
+                    String weatherId = countyList.get(position).getWeatherId();
+                    Intent intent = new Intent(getActivity(),WeatherActivity.class);
+                    intent.putExtra("weather_id",weatherId);
+                    startActivity(intent);
+                    getActivity().finish();
                 }
             }
         });
@@ -160,24 +177,14 @@ public class ChooseAreaFragment extends Fragment {
         }else {
             int provinceCode = selectedProvince.getProvinceCode();
             int cityCode = selectedCity.getCityCode();
-            String address = "http://guolin.tech/api/china" + provinceCode +"/"+cityCode;
+            String address = "http://guolin.tech/api/china/" + provinceCode +"/"+cityCode;
             queryFromServer(address,"county");
         }
     }
 
-    private void queryFromServer(String address,final String type){
+    private void queryFromServer(final String address, final String type){
         showProgressDialog();
         HttpUtil.sendOkHttpRequest(address, new Callback() {
-            @Override
-            public void onFailure(Call call, IOException e) {
-                getActivity().runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        closeProgressDialog();
-                        Toast.makeText(getContext(),"加载失败",Toast.LENGTH_SHORT).show();
-                    }
-                });
-            }
 
             @Override
             public void onResponse(Call call, Response response) throws IOException {
@@ -209,6 +216,20 @@ public class ChooseAreaFragment extends Fragment {
                     });
                 }
             }
+
+
+
+            @Override
+            public void onFailure(Call call, IOException e) {
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        closeProgressDialog();
+                        Toast.makeText(getContext(),"加载失败",Toast.LENGTH_SHORT)
+                                .show();
+                    }
+                });
+            }
         });
 
     }
@@ -217,7 +238,7 @@ public class ChooseAreaFragment extends Fragment {
         if (progressDialog == null){
             progressDialog = new ProgressDialog(getActivity());
             progressDialog.setMessage("正在加载...");
-            progressDialog.setCanceledOnTouchOutside(false);
+            progressDialog.setCanceledOnTouchOutside(true);
         }
         progressDialog.show();
     }
